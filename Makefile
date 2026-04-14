@@ -11,7 +11,7 @@ LDFLAGS = -lraylib
 TARGET = downbat
 
 # Define source files
-SRCS = src/backend/components.cpp src/game/game.cpp src/game/scene_intro.cpp src/game/scene_interlude.cpp src/game/scene_game.cpp src/main.cpp
+SRCS = src/main.cpp
 
 # Define object files
 OBJS = $(SRCS:.cpp=.o)
