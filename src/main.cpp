@@ -5,7 +5,7 @@
 #include <iostream>
 #include <raylib.h>
 
-#define SCREEN_WIDTH 500
+#define SCREEN_WIDTH 600
 #define SCREEN_HEIGHT 956
 static const int SCREEN_WIDTH_MID = SCREEN_WIDTH / 2;
 static const int SCREEN_HEIGHT_MID = SCREEN_HEIGHT / 2;
