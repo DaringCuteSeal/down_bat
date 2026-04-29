@@ -14,6 +14,7 @@ static const int SCREEN_HEIGHT_MID = SCREEN_HEIGHT / 2;
 
 #define GRAVITY 1.9
 #define JUMP_FORCE 20
+#define OBSTACLE_DURATION 2
 
 using std::function;
 using std::vector;
@@ -78,6 +79,7 @@ public:
     // challenge (medium): hapus semua timer yang ditandai to_delete = true
     // dalam waktu O(N)
   }
+  void clear_all() { timers.clear(); }
 };
 
 struct GameData {
