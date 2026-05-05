@@ -13,8 +13,8 @@
 static const int SCREEN_WIDTH_MID = SCREEN_WIDTH / 2;
 static const int SCREEN_HEIGHT_MID = SCREEN_HEIGHT / 2;
 #define OBSTACLES_SPEED 9
-#define OBSTACLE_GAP 100
-#define OBSTACLE_SPACING 3 // in seconds
+#define OBSTACLE_GAP 150
+#define OBSTACLE_SPACING 2 // in seconds
 #define WINDOW_TITLE "down bat!"
 #define FPS 30
 
@@ -38,8 +38,10 @@ public:
   raylib::Texture2D texture;
   std::deque<raylib::Vector2> trunks;
   int speed;
+  int prev_loc_y;
 
   Trunks(int speed) {
+    prev_loc_y = SCREEN_HEIGHT_MID;
     this->speed = speed;
     texture.Load("assets/wood.png");
   }
@@ -48,12 +50,14 @@ public:
   // bagian bawah)
   void add() {
     raylib::Vector2 trunk_top;
-    trunk_top.SetY(-texture.height + GetRandomValue(30, SCREEN_HEIGHT - 30));
+    int y_loc = GetRandomValue(300, SCREEN_HEIGHT - 300);
+    trunk_top.SetY(-texture.height + y_loc);
+    prev_loc_y = y_loc;
     trunk_top.SetX(SCREEN_WIDTH);
 
     raylib::Vector2 trunk_bot;
-    trunk_bot.SetY(trunk_top.y + OBSTACLE_GAP);
-    trunk_top.SetX(SCREEN_WIDTH);
+    trunk_bot.SetY(trunk_top.y + texture.height + OBSTACLE_GAP);
+    trunk_bot.SetX(SCREEN_WIDTH);
 
     trunks.push_back(trunk_top);
     trunks.push_back(trunk_bot);
@@ -204,6 +208,9 @@ void init_gameplay(Game *game) {
   game->data.vel.SetX(OBSTACLES_SPEED);
   game->data.state = GameState::PLAY;
   game->timer.clear_all();
+  game->timer.add_timer(
+      OBSTACLE_SPACING, true,
+      [](GameData *game_data) -> void { game_data->trunks.add(); });
 }
 
 void update_bg(Game *game) {
