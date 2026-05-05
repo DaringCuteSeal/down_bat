@@ -52,6 +52,7 @@ public:
   }
 };
 
+// Timer class
 class Timer {
 public:
   double time_end;
@@ -65,9 +66,11 @@ class TimerMgr {
 public:
   TimerMgr() {}
 
+  // Tambah timer. Durasi dalam detik.
   void add_timer(double duration, function<void()> callback) {
     timers.push_back(Timer{GetTime() + duration, callback, false});
   }
+  // Panggil callback ke timer-timer yang sudah expired dan hapus mereka.
   void update() {
     for (Timer &t : timers) {
       if (GetTime() >= t.time_end) {
@@ -79,6 +82,7 @@ public:
     // challenge (medium): hapus semua timer yang ditandai to_delete = true
     // dalam waktu O(N)
   }
+  // Hapus semua timer
   void clear_all() { timers.clear(); }
 };
 
@@ -91,7 +95,7 @@ struct GameData {
   raylib::Vector2 bg_pos;
 
   GameData() {
-    state = GameState::START_MENU; // ganti nanti
+    state = GameState::START_MENU;
     bat.pos.SetX(SCREEN_WIDTH_MID -
                  bat.bat_flap.width /
                      2); // assume the dimensions of bat_flap = bat_normal
