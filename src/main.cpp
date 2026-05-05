@@ -154,7 +154,6 @@ public:
 
 struct GameData {
   GameState state;
-  TimerMgr timer;
   Bat bat;
   Trunks trunks;
   raylib::Vector2 vel; // bg moves left at vel speed
@@ -178,98 +177,100 @@ struct GameData {
     game_over = false;
     score = 0;
   }
+};
 
-  void add_trunk() { trunks.add(); }
+struct Game {
+  GameData data;
+  TimerMgr timer;
 };
 
 // timer ini menambah trunk, lalu memanggil diri sendiri (selamanya sampai dia
 // dihapus)
 // Fungsi untuk dijalankan ketika permainan mulai (bukan aplikasi, hanya sesi
 // permainan).
-void init_gameplay(GameData *game_data) {
-  game_data->vel.SetX(OBSTACLES_SPEED);
-  game_data->state = GameState::PLAY;
-  game_data->timer.clear_all();
-  game_data->add_trunk();
+void init_gameplay(Game *game) {
+  game->data.vel.SetX(OBSTACLES_SPEED);
+  game->data.state = GameState::PLAY;
+  game->timer.clear_all();
   //  game_data->timer.add_timer();
 }
 
-void update_bg(GameData *game_data) {
+void update_bg(Game *game) {
 
-  game_data->bg_pos.x -= game_data->vel.x;
-  if (game_data->bg_pos.x <= -game_data->bg.width) {
-    game_data->bg_pos.x =
+  game->data.bg_pos.x -= game->data.vel.x;
+  if (game->data.bg_pos.x <= -game->data.bg.width) {
+    game->data.bg_pos.x =
         0; // snap back ke posisi awal. gak bakal keliatan kenapa-kenapa karena
            // posisinya sama persis dengan posisi bg ke-2
   }
 }
 
-void update_game(GameData *game_data) {
-  update_bg(game_data);
-  game_data->vel.y += GRAVITY;
-  game_data->bat.pos.y += game_data->vel.y;
-  game_data->trunks.update();
+void update_game(Game *game) {
+  update_bg(game);
+  game->data.vel.y += GRAVITY;
+  game->data.bat.pos.y += game->data.vel.y;
+  game->data.trunks.update();
 
   if (raylib::Keyboard::IsKeyPressed(KEY_SPACE)) {
-    game_data->vel.y = -JUMP_FORCE;
-    game_data->bat.state = game_data->bat.state == Bat::BatState::NORMAL
+    game->data.vel.y = -JUMP_FORCE;
+    game->data.bat.state = game->data.bat.state == Bat::BatState::NORMAL
                                ? Bat::BatState::FLAP
                                : Bat::BatState::NORMAL;
   }
 }
 
-void update_start(GameData *game_data) {
+void update_start(Game *game_data) {
   if (raylib::Keyboard::IsKeyPressed(KEY_SPACE)) {
     init_gameplay(game_data);
   }
 }
 
-void update(GameData *game_data) {
-  game_data->timer.update();
-  switch (game_data->state) {
+void update(Game *game) {
+  game->timer.update();
+  switch (game->data.state) {
   case GameState::PLAY: {
-    update_game(game_data);
+    update_game(game);
     break;
   }
   case GameState::START_MENU: {
-    update_start(game_data);
+    update_start(game);
     break;
   }
   }
 }
 
-void draw_bg(GameData *game_data) {
-  game_data->bg.Draw(game_data->bg_pos);
-  game_data->bg.Draw(
-      game_data->bg_pos.Add(raylib::Vector2(game_data->bg.width, 0)));
+void draw_bg(Game *game) {
+  game->data.bg.Draw(game->data.bg_pos);
+  game->data.bg.Draw(
+      game->data.bg_pos.Add(raylib::Vector2(game->data.bg.width, 0)));
 }
 
-void draw_game(GameData *game_data) {
-  draw_bg(game_data);
-  game_data->trunks.draw();
-  game_data->bat.draw();
+void draw_game(Game *game) {
+  draw_bg(game);
+  game->data.trunks.draw();
+  game->data.bat.draw();
 }
 
-void draw_start(GameData *game_data) {
-  draw_game(game_data);
+void draw_start(Game *game) {
+  draw_game(game);
   DrawText("Tekan spasi untuk mulai..", 10, 10, 30, WHITE);
-  if (game_data->game_over) {
+  if (game->data.game_over) {
     DrawText("KALAH!", SCREEN_WIDTH_MID - 75, SCREEN_HEIGHT_MID, 50, WHITE);
-    string fmt = &"Skor: "[game_data->score];
+    string fmt = &"Skor: "[game->data.score];
     DrawText(fmt.c_str(), SCREEN_WIDTH_MID - 100, SCREEN_HEIGHT_MID, 30, WHITE);
   }
 }
 
-void draw(GameData *game_data) {
+void draw(Game *game) {
   BeginDrawing();
 
-  switch (game_data->state) {
+  switch (game->data.state) {
   case GameState::PLAY: {
-    draw_game(game_data);
+    draw_game(game);
     break;
   }
   case GameState::START_MENU: {
-    draw_start(game_data);
+    draw_start(game);
     break;
   }
   }
@@ -290,7 +291,7 @@ int main() {
   // Beri seed untuk RNG
   SetRandomSeed(time(NULL));
 
-  GameData game_data;
+  Game game_data;
 
   while (!raylib::Window::ShouldClose()) {
     update(&game_data);
