@@ -138,8 +138,10 @@ struct GameData {
 class Timer {
 public:
   double time_end;
+  double duration;
   function<void(GameData *game_data)> callback;
   bool to_delete;
+  bool repeat;
 };
 
 class TimerMgr {
@@ -150,9 +152,10 @@ public:
   TimerMgr(GameData *game_data) { this->game_data = game_data; }
 
   // Tambah timer. Durasi dalam detik.
-  void add_timer(double duration,
+  void add_timer(double duration, bool repeat,
                  function<void(GameData *game_data)> callback) {
-    timers.push_back(Timer{GetTime() + duration, callback, false});
+    timers.push_back(
+        Timer{GetTime() + duration, duration, callback, false, repeat});
   }
   // Panggil callback ke timer-timer yang sudah expired dan hapus mereka.
   void update() {
@@ -160,8 +163,14 @@ public:
     for (Timer &t : timers) {
       if (GetTime() >= t.time_end) {
         t.callback(this->game_data);
-        t.to_delete = true;
-        del_count += 1;
+        if (t.repeat) {
+          // kalau mau ngulang kita tambah tambah aja terus
+          t.time_end = GetTime() + t.duration;
+        } else {
+          // otherwise kita hapus
+          t.to_delete = true;
+          del_count += 1;
+        }
       }
     }
 
@@ -195,7 +204,6 @@ void init_gameplay(Game *game) {
   game->data.vel.SetX(OBSTACLES_SPEED);
   game->data.state = GameState::PLAY;
   game->timer.clear_all();
-  //  game_data->timer.add_timer();
 }
 
 void update_bg(Game *game) {
