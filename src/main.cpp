@@ -107,51 +107,6 @@ public:
   }
 };
 
-// Timer class
-class Timer {
-public:
-  double time_end;
-  function<void()> callback;
-  bool to_delete;
-};
-
-class TimerMgr {
-  vector<Timer> timers;
-
-public:
-  TimerMgr() {}
-
-  // Tambah timer. Durasi dalam detik.
-  void add_timer(double duration, function<void()> callback) {
-    timers.push_back(Timer{GetTime() + duration, callback, false});
-  }
-  // Panggil callback ke timer-timer yang sudah expired dan hapus mereka.
-  void update() {
-    size_t del_count = 0;
-    for (Timer &t : timers) {
-      if (GetTime() >= t.time_end) {
-        t.callback();
-        t.to_delete = true;
-        del_count += 1;
-      }
-    }
-
-    size_t new_size = timers.size() - del_count;
-
-    size_t sep = 0;
-    for (size_t i = 0; i < timers.size(); i++) {
-      if (!timers[i].to_delete) {
-        swap(timers[i], timers[sep]);
-        sep += 1;
-      }
-    }
-
-    timers.resize(new_size);
-  }
-  // Hapus semua timer
-  void clear_all() { timers.clear(); }
-};
-
 struct GameData {
   GameState state;
   Bat bat;
@@ -179,9 +134,57 @@ struct GameData {
   }
 };
 
+// Timer class
+class Timer {
+public:
+  double time_end;
+  function<void(GameData *game_data)> callback;
+  bool to_delete;
+};
+
+class TimerMgr {
+  GameData *game_data;
+  vector<Timer> timers;
+
+public:
+  TimerMgr(GameData *game_data) { this->game_data = game_data; }
+
+  // Tambah timer. Durasi dalam detik.
+  void add_timer(double duration,
+                 function<void(GameData *game_data)> callback) {
+    timers.push_back(Timer{GetTime() + duration, callback, false});
+  }
+  // Panggil callback ke timer-timer yang sudah expired dan hapus mereka.
+  void update() {
+    size_t del_count = 0;
+    for (Timer &t : timers) {
+      if (GetTime() >= t.time_end) {
+        t.callback(this->game_data);
+        t.to_delete = true;
+        del_count += 1;
+      }
+    }
+
+    size_t new_size = timers.size() - del_count;
+
+    size_t sep = 0;
+    for (size_t i = 0; i < timers.size(); i++) {
+      if (!timers[i].to_delete) {
+        swap(timers[i], timers[sep]);
+        sep += 1;
+      }
+    }
+
+    timers.resize(new_size);
+  }
+  // Hapus semua timer
+  void clear_all() { timers.clear(); }
+};
+
 struct Game {
   GameData data;
   TimerMgr timer;
+  Game() : timer(&this->data) {}
 };
 
 // timer ini menambah trunk, lalu memanggil diri sendiri (selamanya sampai dia
