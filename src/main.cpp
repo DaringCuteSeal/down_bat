@@ -13,17 +13,19 @@
 static const int SCREEN_WIDTH_MID = SCREEN_WIDTH / 2;
 static const int SCREEN_HEIGHT_MID = SCREEN_HEIGHT / 2;
 #define OBSTACLES_SPEED 9
-#define OBSTACLE_GAP 150
+#define OBSTACLE_GAP 200
 #define OBSTACLE_SPACING 2 // in seconds
 #define WINDOW_TITLE "down bat!"
 #define FPS 30
+#define TEXT_HINT_FONT_SIZE 30
 
 #define GRAVITY 1.9
-#define JUMP_FORCE 20
+#define JUMP_FORCE 16
 #define OBSTACLE_DURATION 2
 
 using std::deque;
 using std::function;
+using std::pair;
 using std::string;
 using std::swap;
 using std::vector;
@@ -36,13 +38,13 @@ enum GameState {
 class Trunks {
 public:
   raylib::Texture2D texture;
-  std::deque<raylib::Vector2> trunks;
+  std::deque<pair<bool, raylib::Vector2>> trunks_top;
+  std::deque<raylib::Vector2> trunks_bot;
   int speed;
   int prev_loc_y;
 
-  Trunks(int speed) {
+  Trunks() {
     prev_loc_y = SCREEN_HEIGHT_MID;
-    this->speed = speed;
     texture.Load("assets/wood.png");
   }
 
@@ -53,31 +55,36 @@ public:
     int y_loc = GetRandomValue(300, SCREEN_HEIGHT - 300);
     trunk_top.SetY(-texture.height + y_loc);
     prev_loc_y = y_loc;
-    trunk_top.SetX(SCREEN_WIDTH);
+    trunk_top.SetX(SCREEN_WIDTH + GetRandomValue(-30, 30));
 
     raylib::Vector2 trunk_bot;
     trunk_bot.SetY(trunk_top.y + texture.height + OBSTACLE_GAP);
     trunk_bot.SetX(SCREEN_WIDTH);
 
-    trunks.push_back(trunk_top);
-    trunks.push_back(trunk_bot);
+    trunks_top.push_back({false, trunk_top});
+    trunks_bot.push_back(trunk_bot);
   }
 
   void update() {
-    for (auto &t : trunks) {
-      t.x -= speed;
-    }
-
     // hapus semua trunks yang udah gak keliatan
     // bisa dengan asumsi semua trunk disusun berdasarkan posisi x nya
     // (ascending).
-    while (trunks.size() > 0 && trunks.front().x <= -SCREEN_WIDTH) {
-      trunks.pop_front();
+    while (trunks_top.size() > 0 &&
+           trunks_top.front().second.x <= -SCREEN_WIDTH) {
+      trunks_top.pop_front();
+    }
+
+    while (trunks_bot.size() > 0 && trunks_bot.front().x <= -SCREEN_WIDTH) {
+      trunks_bot.pop_front();
     }
   }
 
   void draw() {
-    for (auto &t : trunks) {
+    for (auto &t : trunks_top) {
+      texture.Draw(t.second);
+    }
+
+    for (auto &t : trunks_bot) {
       texture.Draw(t);
     }
   }
@@ -121,7 +128,7 @@ struct GameData {
   bool game_over;
   int score;
 
-  GameData() : trunks(OBSTACLES_SPEED) {
+  GameData() {
     state = GameState::START_MENU;
     bat.pos.SetX(SCREEN_WIDTH_MID -
                  bat.bat_flap.width /
@@ -223,8 +230,24 @@ void update_bg(Game *game) {
   }
 }
 
+void update_trunks(Game *game) {
+  for (auto &t : game->data.trunks.trunks_top) {
+    t.second.x -= OBSTACLES_SPEED;
+    if (!t.first &&
+        t.second.x + game->data.trunks.texture.width <= game->data.bat.pos.x) {
+      t.first = true;
+      game->data.score += 1;
+    }
+  }
+
+  for (auto &t : game->data.trunks.trunks_bot) {
+    t.x -= OBSTACLES_SPEED;
+  }
+}
+
 void update_game(Game *game) {
   update_bg(game);
+  update_trunks(game);
   game->data.vel.y += GRAVITY;
   game->data.bat.pos.y += game->data.vel.y;
   game->data.trunks.update();
@@ -267,15 +290,17 @@ void draw_game(Game *game) {
   draw_bg(game);
   game->data.trunks.draw();
   game->data.bat.draw();
+  string s = "Skor: " + std::to_string(game->data.score);
+  DrawText(s.c_str(), 10, 10, 30, WHITE);
 }
 
 void draw_start(Game *game) {
   draw_game(game);
-  DrawText("Tekan spasi untuk mulai..", 10, 10, 30, WHITE);
+  DrawText("Tekan spasi untuk mulai..", 10,
+           SCREEN_HEIGHT - 10 - TEXT_HINT_FONT_SIZE, TEXT_HINT_FONT_SIZE,
+           WHITE);
   if (game->data.game_over) {
     DrawText("KALAH!", SCREEN_WIDTH_MID - 75, SCREEN_HEIGHT_MID, 50, WHITE);
-    string fmt = &"Skor: "[game->data.score];
-    DrawText(fmt.c_str(), SCREEN_WIDTH_MID - 100, SCREEN_HEIGHT_MID, 30, WHITE);
   }
 }
 
