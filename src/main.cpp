@@ -30,16 +30,18 @@ using std::string;
 using std::swap;
 using std::vector;
 
-enum GameState {
-  START_MENU,
-  PLAY,
+enum GameState { START_MENU, PLAY, REPLAY };
+
+struct Trunk {
+  raylib::Vector2 pos;
+  raylib::Rectangle collision_rect;
 };
 
 class Trunks {
 public:
   raylib::Texture2D texture;
-  std::deque<pair<bool, raylib::Vector2>> trunks_top;
-  std::deque<raylib::Vector2> trunks_bot;
+  std::deque<pair<bool, Trunk>> trunks_top;
+  std::deque<Trunk> trunks_bot;
   int speed;
   int prev_loc_y;
 
@@ -61,8 +63,10 @@ public:
     trunk_bot.SetY(trunk_top.y + texture.height + OBSTACLE_GAP);
     trunk_bot.SetX(SCREEN_WIDTH);
 
-    trunks_top.push_back({false, trunk_top});
-    trunks_bot.push_back(trunk_bot);
+    trunks_top.push_back(
+        {false, {trunk_top, raylib::Rectangle(trunk_top, texture.GetSize())}});
+    trunks_bot.push_back(
+        {trunk_bot, raylib::Rectangle(trunk_bot, texture.GetSize())});
   }
 
   void update() {
@@ -70,22 +74,22 @@ public:
     // bisa dengan asumsi semua trunk disusun berdasarkan posisi x nya
     // (ascending).
     while (trunks_top.size() > 0 &&
-           trunks_top.front().second.x <= -SCREEN_WIDTH) {
+           trunks_top.front().second.pos.x <= -SCREEN_WIDTH) {
       trunks_top.pop_front();
     }
 
-    while (trunks_bot.size() > 0 && trunks_bot.front().x <= -SCREEN_WIDTH) {
+    while (trunks_bot.size() > 0 && trunks_bot.front().pos.x <= -SCREEN_WIDTH) {
       trunks_bot.pop_front();
     }
   }
 
   void draw() {
     for (auto &t : trunks_top) {
-      texture.Draw(t.second);
+      texture.Draw(t.second.pos);
     }
 
     for (auto &t : trunks_bot) {
-      texture.Draw(t);
+      texture.Draw(t.pos);
     }
   }
 };
@@ -98,6 +102,7 @@ public:
   raylib::Vector2 pos;
   enum BatState { NORMAL, FLAP };
   BatState state;
+  raylib::Rectangle collision_rect;
 
   Bat() {
     bat_normal.Load("assets/bat1.png");
@@ -112,6 +117,24 @@ public:
     }
     case BatState::NORMAL: {
       bat_normal.Draw(this->pos, this->rot);
+      break;
+    }
+    }
+  }
+
+  raylib::Rectangle *get_collision_rect() {
+    switch (state) {
+    case BatState::FLAP: {
+      collision_rect.SetPosition(this->pos);
+      collision_rect.SetSize(this->bat_flap.GetSize());
+      return &this->collision_rect;
+      break;
+    }
+    case BatState::NORMAL: {
+      raylib::Vector2 offset(100, 0);
+      collision_rect.SetPosition(this->pos - offset);
+      collision_rect.SetSize(this->bat_flap.GetSize() - offset);
+      return &this->collision_rect;
       break;
     }
     }
@@ -232,18 +255,20 @@ void update_bg(Game *game) {
 
 void update_trunks(Game *game) {
   for (auto &t : game->data.trunks.trunks_top) {
-    t.second.x -= OBSTACLES_SPEED;
-    if (!t.first &&
-        t.second.x + game->data.trunks.texture.width <= game->data.bat.pos.x) {
+    t.second.pos.x -= OBSTACLES_SPEED;
+    if (!t.first && t.second.pos.x + game->data.trunks.texture.width <=
+                        game->data.bat.pos.x) {
       t.first = true;
       game->data.score += 1;
     }
   }
 
   for (auto &t : game->data.trunks.trunks_bot) {
-    t.x -= OBSTACLES_SPEED;
+    t.pos.x -= OBSTACLES_SPEED;
   }
 }
+
+void update_life(Game *game) {}
 
 void update_game(Game *game) {
   update_bg(game);
@@ -304,6 +329,8 @@ void draw_start(Game *game) {
   }
 }
 
+void draw_replay(Game *game) {}
+
 void draw(Game *game) {
   BeginDrawing();
 
@@ -314,6 +341,10 @@ void draw(Game *game) {
   }
   case GameState::START_MENU: {
     draw_start(game);
+    break;
+  }
+  case GameState::REPLAY: {
+    draw_replay(game);
     break;
   }
   }
