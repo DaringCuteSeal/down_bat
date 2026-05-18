@@ -91,21 +91,28 @@ public:
       texture.Draw(t.pos);
     }
   }
+
+  void clear() {
+    trunks_top.clear();
+    trunks_bot.clear();
+  }
 };
 
 class Bat {
 public:
   raylib::Texture2D bat_normal;
   raylib::Texture2D bat_flap;
+  raylib::Texture2D bat_dead;
   float rot;
   raylib::Vector2 pos;
-  enum BatState { NORMAL, FLAP };
+  enum BatState { NORMAL, FLAP, DEAD };
   BatState state;
   raylib::Rectangle collision_rect;
 
   Bat() {
     bat_normal.Load("assets/bat1.png");
     bat_flap.Load("assets/bat2.png");
+    bat_dead.Load("assets/bat3.png");
   };
 
   void draw() {
@@ -116,6 +123,10 @@ public:
     }
     case BatState::NORMAL: {
       bat_normal.Draw(this->pos, this->rot);
+      break;
+    }
+    case BatState::DEAD: {
+      bat_dead.Draw(this->pos, this->rot);
       break;
     }
     }
@@ -135,6 +146,8 @@ public:
       collision_rect.SetSize(this->bat_flap.GetSize() - offset);
       break;
     }
+    default: {
+    }
     }
     return &this->collision_rect;
   }
@@ -147,11 +160,11 @@ struct GameData {
   raylib::Vector2 vel; // bg moves left at vel speed
   raylib::Texture2D bg;
   raylib::Vector2 bg_pos;
-  bool game_over;
   int score;
 
   GameData() {
     state = GameState::START_MENU;
+    bat.state = Bat::FLAP;
     bat.pos.SetX(SCREEN_WIDTH_MID -
                  bat.bat_flap.width /
                      2); // assume the dimensions of bat_flap = bat_normal
@@ -162,7 +175,6 @@ struct GameData {
     bg_pos.SetY(0);
     vel.SetX(0);
     vel.SetY(0);
-    game_over = false;
     score = 0;
   }
 };
@@ -234,9 +246,19 @@ struct Game {
 // Fungsi untuk dijalankan ketika permainan mulai (bukan aplikasi, hanya sesi
 // permainan).
 void init_gameplay(Game *game) {
+  game->data.bat.pos.SetX(
+      SCREEN_WIDTH_MID -
+      game->data.bat.bat_flap.width /
+          2); // assume the dimensions of bat_flap = bat_normal
+  game->data.bat.pos.SetY(SCREEN_HEIGHT_MID -
+                          game->data.bat.bat_flap.height / 2);
+
+  game->data.bat.state = Bat::FLAP;
+  game->data.score = 0;
   game->data.vel.SetX(OBSTACLES_SPEED);
   game->data.state = GameState::PLAY;
   game->timer.clear_all();
+  game->data.trunks.clear();
   game->timer.add_timer(
       OBSTACLE_SPACING, true,
       [](GameData *game_data) -> void { game_data->trunks.add(); });
@@ -306,7 +328,12 @@ void update_start(Game *game_data) {
   }
 }
 
-void update_dead_anim(Game *game_data) {}
+void update_dead_anim(Game *game_data) {
+  game_data->data.bat.state = Bat::DEAD;
+  if (raylib::Keyboard::IsKeyPressed(KEY_SPACE)) {
+    init_gameplay(game_data);
+  }
+}
 
 void update(Game *game) {
   game->timer.update();
@@ -337,13 +364,6 @@ void draw_game(Game *game) {
   game->data.trunks.draw();
   game->data.bat.draw();
 
-  for (auto &t : game->data.trunks.trunks_top) {
-
-    t.second.collision_rect.Draw(BLACK);
-    game->data.bat.update_collision_rect();
-    game->data.bat.collision_rect.Draw(YELLOW);
-  }
-
   string s = "Skor: " + std::to_string(game->data.score);
   DrawText(s.c_str(), 10, 10, 30, WHITE);
 }
@@ -353,12 +373,14 @@ void draw_start(Game *game) {
   DrawText("Tekan spasi untuk mulai..", 10,
            SCREEN_HEIGHT - 10 - TEXT_HINT_FONT_SIZE, TEXT_HINT_FONT_SIZE,
            WHITE);
-  if (game->data.game_over) {
-    DrawText("KALAH!", SCREEN_WIDTH_MID - 75, SCREEN_HEIGHT_MID, 50, WHITE);
-  }
 }
 
-void draw_dead_anim(Game *game) {}
+void draw_dead_anim(Game *game) {
+  draw_game(game);
+  DrawText("KALAH!", SCREEN_WIDTH_MID - 75, SCREEN_HEIGHT_MID - 50, 50, WHITE);
+  DrawText("Tekan spasi untuk main lagi..", SCREEN_WIDTH_MID - 200,
+           SCREEN_HEIGHT_MID - 50 + 50, 30, WHITE);
+}
 
 void draw(Game *game) {
   BeginDrawing();
