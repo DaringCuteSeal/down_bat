@@ -30,7 +30,7 @@ using std::string;
 using std::swap;
 using std::vector;
 
-enum GameState { START_MENU, PLAY, REPLAY };
+enum GameState { START_MENU, PLAY, DEAD_ANIM };
 
 struct Trunk {
   raylib::Vector2 pos;
@@ -63,10 +63,9 @@ public:
     trunk_bot.SetY(trunk_top.y + texture.height + OBSTACLE_GAP);
     trunk_bot.SetX(SCREEN_WIDTH);
 
-    trunks_top.push_back(
-        {false, {trunk_top, raylib::Rectangle(trunk_top, texture.GetSize())}});
-    trunks_bot.push_back(
-        {trunk_bot, raylib::Rectangle(trunk_bot, texture.GetSize())});
+    const raylib::Vector2 size(234, 1019);
+    trunks_top.push_back({false, {trunk_top, raylib::Rectangle({0, 0}, size)}});
+    trunks_bot.push_back({trunk_bot, raylib::Rectangle({0, 0}, size)});
   }
 
   void update() {
@@ -122,22 +121,22 @@ public:
     }
   }
 
-  raylib::Rectangle *get_collision_rect() {
+  // Harus dipanggil sebelum menggunakan this->collision_rect
+  raylib::Rectangle *update_collision_rect() {
     switch (state) {
     case BatState::FLAP: {
       collision_rect.SetPosition(this->pos);
       collision_rect.SetSize(this->bat_flap.GetSize());
-      return &this->collision_rect;
       break;
     }
     case BatState::NORMAL: {
-      raylib::Vector2 offset(100, 0);
-      collision_rect.SetPosition(this->pos - offset);
+      raylib::Vector2 offset(0, 50);
+      collision_rect.SetPosition(this->pos + offset);
       collision_rect.SetSize(this->bat_flap.GetSize() - offset);
-      return &this->collision_rect;
       break;
     }
     }
+    return &this->collision_rect;
   }
 };
 
@@ -248,12 +247,19 @@ void update_bg(Game *game) {
   game->data.bg_pos.x -= game->data.vel.x;
   if (game->data.bg_pos.x <= -game->data.bg.width) {
     game->data.bg_pos.x =
-        0; // snap back ke posisi awal. gak bakal keliatan kenapa-kenapa karena
-           // posisinya sama persis dengan posisi bg ke-2
+        0; // snap back ke posisi awal. gak bakal keliatan kenapa-kenapa
+           // karena posisinya sama persis dengan posisi bg ke-2
   }
 }
 
+bool collision_trunk_bat(Trunk *trunk, Bat *bat) {
+  bat->update_collision_rect();
+  return CheckCollisionRecs(trunk->collision_rect, bat->collision_rect);
+}
+
 void update_trunks(Game *game) {
+  const raylib::Vector2 trunk_collision_offset(63, 22);
+
   for (auto &t : game->data.trunks.trunks_top) {
     t.second.pos.x -= OBSTACLES_SPEED;
     if (!t.first && t.second.pos.x + game->data.trunks.texture.width <=
@@ -261,14 +267,23 @@ void update_trunks(Game *game) {
       t.first = true;
       game->data.score += 1;
     }
+    t.second.collision_rect.SetPosition(t.second.pos + trunk_collision_offset);
+
+    if (collision_trunk_bat(&t.second, &game->data.bat)) {
+      game->data.state = GameState::DEAD_ANIM;
+    }
   }
 
   for (auto &t : game->data.trunks.trunks_bot) {
     t.pos.x -= OBSTACLES_SPEED;
+
+    t.collision_rect.SetPosition(t.pos + trunk_collision_offset);
+
+    if (collision_trunk_bat(&t, &game->data.bat)) {
+      game->data.state = GameState::DEAD_ANIM;
+    }
   }
 }
-
-void update_life(Game *game) {}
 
 void update_game(Game *game) {
   update_bg(game);
@@ -291,6 +306,8 @@ void update_start(Game *game_data) {
   }
 }
 
+void update_dead_anim(Game *game_data) {}
+
 void update(Game *game) {
   game->timer.update();
   switch (game->data.state) {
@@ -300,6 +317,10 @@ void update(Game *game) {
   }
   case GameState::START_MENU: {
     update_start(game);
+    break;
+  }
+  case GameState::DEAD_ANIM: {
+    update_dead_anim(game);
     break;
   }
   }
@@ -315,6 +336,14 @@ void draw_game(Game *game) {
   draw_bg(game);
   game->data.trunks.draw();
   game->data.bat.draw();
+
+  for (auto &t : game->data.trunks.trunks_top) {
+
+    t.second.collision_rect.Draw(BLACK);
+    game->data.bat.update_collision_rect();
+    game->data.bat.collision_rect.Draw(YELLOW);
+  }
+
   string s = "Skor: " + std::to_string(game->data.score);
   DrawText(s.c_str(), 10, 10, 30, WHITE);
 }
@@ -329,7 +358,7 @@ void draw_start(Game *game) {
   }
 }
 
-void draw_replay(Game *game) {}
+void draw_dead_anim(Game *game) {}
 
 void draw(Game *game) {
   BeginDrawing();
@@ -343,8 +372,8 @@ void draw(Game *game) {
     draw_start(game);
     break;
   }
-  case GameState::REPLAY: {
-    draw_replay(game);
+  case GameState::DEAD_ANIM: {
+    draw_dead_anim(game);
     break;
   }
   }
