@@ -30,7 +30,7 @@ using std::string;
 using std::swap;
 using std::vector;
 
-enum GameState { START_MENU, PLAY, DEAD_ANIM };
+enum GameState { START_MENU, PLAY, LOST };
 
 struct Trunk {
   raylib::Vector2 pos;
@@ -292,7 +292,7 @@ void update_trunks(Game *game) {
     t.second.collision_rect.SetPosition(t.second.pos + trunk_collision_offset);
 
     if (collision_trunk_bat(&t.second, &game->data.bat)) {
-      game->data.state = GameState::DEAD_ANIM;
+      game->data.state = GameState::LOST;
     }
   }
 
@@ -302,7 +302,7 @@ void update_trunks(Game *game) {
     t.collision_rect.SetPosition(t.pos + trunk_collision_offset);
 
     if (collision_trunk_bat(&t, &game->data.bat)) {
-      game->data.state = GameState::DEAD_ANIM;
+      game->data.state = GameState::LOST;
     }
   }
 }
@@ -346,7 +346,7 @@ void update(Game *game) {
     update_start(game);
     break;
   }
-  case GameState::DEAD_ANIM: {
+  case GameState::LOST: {
     update_dead_anim(game);
     break;
   }
@@ -394,7 +394,7 @@ void draw(Game *game) {
     draw_start(game);
     break;
   }
-  case GameState::DEAD_ANIM: {
+  case GameState::LOST: {
     draw_dead_anim(game);
     break;
   }
