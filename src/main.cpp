@@ -160,6 +160,9 @@ struct GameData {
   raylib::Vector2 vel; // bg moves left at vel speed
   raylib::Texture2D bg;
   raylib::Vector2 bg_pos;
+  raylib::Music bg_music;
+  raylib::Sound point_sfx;
+  raylib::Sound dead_sfx;
   float rot;
   int score;
 
@@ -173,6 +176,11 @@ struct GameData {
     bat.pos.SetY(SCREEN_HEIGHT_MID - bat.bat_flap.height / 2);
     bat.state = Bat::BatState::NORMAL;
     bg.Load("assets/bg.png");
+    bg_music.Load("assets/theme_song.mp3");
+    bg_music.looping = true;
+    bg_music.Play();
+    dead_sfx.Load("assets/sfx_dead.mp3");
+    point_sfx.Load("assets/sfx_lvlup.mp3");
     bg_pos.SetX(0);
     bg_pos.SetY(0);
     vel.SetX(0);
@@ -286,6 +294,7 @@ bool collision_trunk_bat(Trunk *trunk, Bat *bat) {
 void game_lost_init(Game *game) {
   game->data.vel = raylib::Vector2(0, 0);
   game->data.state = GameState::LOST;
+  game->data.dead_sfx.Play();
 }
 void update_trunks(Game *game) {
   const raylib::Vector2 trunk_collision_offset(63, 22);
@@ -296,6 +305,7 @@ void update_trunks(Game *game) {
                         game->data.bat.pos.x) {
       t.first = true;
       game->data.score += 1;
+      game->data.point_sfx.Play();
     }
     t.second.collision_rect.SetPosition(t.second.pos + trunk_collision_offset);
 
@@ -356,6 +366,7 @@ void update_dead_anim(Game *game) {
 }
 
 void update(Game *game) {
+  game->data.bg_music.Update();
   game->timer.update();
   switch (game->data.state) {
   case GameState::PLAY: {
