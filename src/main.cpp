@@ -160,9 +160,11 @@ struct GameData {
   raylib::Vector2 vel; // bg moves left at vel speed
   raylib::Texture2D bg;
   raylib::Vector2 bg_pos;
+  float rot;
   int score;
 
   GameData() {
+    rot = 0;
     state = GameState::START_MENU;
     bat.state = Bat::FLAP;
     bat.pos.SetX(SCREEN_WIDTH_MID -
@@ -253,6 +255,7 @@ void init_gameplay(Game *game) {
   game->data.bat.pos.SetY(SCREEN_HEIGHT_MID -
                           game->data.bat.bat_flap.height / 2);
 
+  game->data.bat.rot = 0;
   game->data.bat.state = Bat::FLAP;
   game->data.score = 0;
   game->data.vel.SetY(0);
@@ -280,6 +283,10 @@ bool collision_trunk_bat(Trunk *trunk, Bat *bat) {
   return CheckCollisionRecs(trunk->collision_rect, bat->collision_rect);
 }
 
+void game_lost_init(Game *game) {
+  game->data.vel = raylib::Vector2(0, 0);
+  game->data.state = GameState::LOST;
+}
 void update_trunks(Game *game) {
   const raylib::Vector2 trunk_collision_offset(63, 22);
 
@@ -293,7 +300,7 @@ void update_trunks(Game *game) {
     t.second.collision_rect.SetPosition(t.second.pos + trunk_collision_offset);
 
     if (collision_trunk_bat(&t.second, &game->data.bat)) {
-      game->data.state = GameState::LOST;
+      game_lost_init(game);
     }
   }
 
@@ -303,7 +310,7 @@ void update_trunks(Game *game) {
     t.collision_rect.SetPosition(t.pos + trunk_collision_offset);
 
     if (collision_trunk_bat(&t, &game->data.bat)) {
-      game->data.state = GameState::LOST;
+      game_lost_init(game);
     }
   }
 }
@@ -337,10 +344,14 @@ void update_start(Game *game_data) {
   }
 }
 
-void update_dead_anim(Game *game_data) {
-  game_data->data.bat.state = Bat::DEAD;
+void update_dead_anim(Game *game) {
+  if (game->data.bat.pos.y <= SCREEN_HEIGHT + game->data.bat.bat_flap.height) {
+    game->data.bat.rot += 15;
+    game->data.vel.y += GRAVITY;
+    game->data.bat.pos.y += game->data.vel.y;
+  }
   if (raylib::Keyboard::IsKeyPressed(KEY_SPACE)) {
-    init_gameplay(game_data);
+    init_gameplay(game);
   }
 }
 
@@ -385,7 +396,15 @@ void draw_start(Game *game) {
 }
 
 void draw_dead_anim(Game *game) {
-  draw_game(game);
+  draw_bg(game);
+  game->data.trunks.draw();
+  DrawTexturePro(
+      game->data.bat.bat_dead,
+      raylib::Rectangle(0, 0, game->data.bat.bat_dead.width,
+                        game->data.bat.bat_dead.height),
+      raylib::Rectangle(game->data.bat.pos, game->data.bat.bat_dead.GetSize()),
+      game->data.bat.bat_dead.GetSize() / 2, game->data.bat.rot, WHITE);
+
   DrawText("KALAH!", SCREEN_WIDTH_MID - 75, SCREEN_HEIGHT_MID - 50, 50, WHITE);
   DrawText("Tekan spasi untuk main lagi..", SCREEN_WIDTH_MID - 200,
            SCREEN_HEIGHT_MID - 50 + 50, 30, WHITE);
