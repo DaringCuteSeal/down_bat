@@ -3,9 +3,7 @@
 #include <ctime>
 #include <dbg.h>
 #include <deque>
-#include <format>
 #include <functional>
-#include <iostream>
 #include <raylib.h>
 
 #define SCREEN_WIDTH 600
