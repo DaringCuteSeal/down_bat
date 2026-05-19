@@ -419,6 +419,8 @@ void draw_dead_anim(Game *game) {
   DrawText("KALAH!", SCREEN_WIDTH_MID - 75, SCREEN_HEIGHT_MID - 50, 50, WHITE);
   DrawText("Tekan spasi untuk main lagi..", SCREEN_WIDTH_MID - 200,
            SCREEN_HEIGHT_MID - 50 + 50, 30, WHITE);
+  string s = "Skor: " + std::to_string(game->data.score);
+  DrawText(s.c_str(), 10, 10, 30, WHITE);
 }
 
 void draw(Game *game) {
