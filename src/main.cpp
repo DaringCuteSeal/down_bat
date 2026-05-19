@@ -255,6 +255,7 @@ void init_gameplay(Game *game) {
 
   game->data.bat.state = Bat::FLAP;
   game->data.score = 0;
+  game->data.vel.SetY(0);
   game->data.vel.SetX(OBSTACLES_SPEED);
   game->data.state = GameState::PLAY;
   game->timer.clear_all();
@@ -307,9 +308,17 @@ void update_trunks(Game *game) {
   }
 }
 
+void update_out_ouf_window(Game *game) {
+  if (game->data.bat.pos.y < -game->data.bat.bat_flap.height ||
+      game->data.bat.pos.y > SCREEN_HEIGHT) {
+    game->data.state = GameState::LOST;
+  }
+}
+
 void update_game(Game *game) {
   update_bg(game);
   update_trunks(game);
+  update_out_ouf_window(game);
   game->data.vel.y += GRAVITY;
   game->data.bat.pos.y += game->data.vel.y;
   game->data.trunks.update();
